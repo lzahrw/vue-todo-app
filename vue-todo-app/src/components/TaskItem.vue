@@ -15,7 +15,7 @@
         <button @click="startEditing">Edit</button>
         <button @click="deleteTask">Delete</button>
         <button @click="toggleArchive">{{ task.archived ? 'Unarchive' : 'Archive' }}</button>
-        <button @click="changeStatus">{{ task.status }}</button>
+        <button @click="toggleStatus">{{ task.status }}</button>
       </div>
     </li>
   </template>
@@ -62,13 +62,7 @@
         emit('toggle-archive', props.task.id)
       }
   
-      const changeStatus = () => {
-        const statusOrder = ['Pending', 'In Progress', 'Completed']
-        const currentStatusIndex = statusOrder.indexOf(props.task.status)
-        const nextStatusIndex = (currentStatusIndex + 1) % statusOrder.length
-        const newStatus = statusOrder[nextStatusIndex]
-        emit('toggle-task-status', props.task.id)
-      }
+
   
       // Computed class for styling task state
       const taskClass = computed(() => ({
@@ -104,7 +98,6 @@
         deleteTask,
         toggleStatus,
         toggleArchive,
-        changeStatus,
         taskClass,
         priorityClass,
         dueDateClass,
