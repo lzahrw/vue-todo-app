@@ -1,143 +1,143 @@
+<!-- src/components/TaskItem.vue -->
 <template>
-    <li :class="taskClass">
-      <div v-if="isEditing">
-        <!-- The TaskEdit component -->
-        <TaskEdit
-          :task="task"
-          @update-task="updateTask"
-          @close-edit="closeEdit"
-        />
+    <div class="task-item card mb-2">
+      <div class="card-body p-2">
+        <!-- Normal view when not editing -->
+        <div v-if="!isEditing">
+          <h5 class="card-title">{{ task.title }}</h5>
+          <p class="card-text">
+            Due: {{ task.dueDate || "No due date" }}<br />
+            Priority: {{ task.priority }}
+          </p>
+          <div class="d-flex justify-content-between">
+            <button class="btn btn-warning btn-sm" @click="startEditing">Edit</button>
+            <button class="btn btn-danger btn-sm" @click="deleteTask">Delete</button>
+            <button class="btn btn-secondary btn-sm" @click="archiveTask">Archive</button>
+          </div>
+        </div>
+  
+        <!-- Editing view -->
+        <div v-else>
+          <input
+            type="text"
+            v-model="editData.title"
+            class="form-control mb-2"
+            placeholder="Task title"
+          />
+          <input
+            type="date"
+            v-model="editData.dueDate"
+            class="form-control mb-2"
+          />
+          <select v-model="editData.priority" class="form-select mb-2">
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+          </select>
+          <!-- New: Board selection dropdown -->
+          <select v-model="editData.boardId" class="form-select mb-2">
+            <option 
+              v-for="b in allBoards" 
+              :value="b.id" 
+              :key="b.id">
+              {{ b.name }}
+            </option>
+          </select>
+          <div class="d-flex justify-content-end">
+            <button class="btn btn-success btn-sm" @click="saveEdit">Save</button>
+            <button class="btn btn-secondary btn-sm ms-2" @click="cancelEdit">Cancel</button>
+          </div>
+        </div>
       </div>
-      <div v-else>
-        <span :class="priorityClass">{{ task.title }}</span>
-        <span :class="priorityClass">{{ task.priority }}</span>
-        <span :class="dueDateClass">{{ formattedDueDate }}</span>
-        <button @click="startEditing">Edit</button>
-        <button @click="deleteTask">Delete</button>
-        <button @click="toggleArchive">{{ task.archived ? 'Unarchive' : 'Archive' }}</button>
-        <button @click="toggleStatus">{{ task.status }}</button>
-      </div>
-    </li>
+    </div>
   </template>
   
   <script>
-  import { ref, computed } from 'vue'
-  import TaskEdit from './TaskEdit.vue'
-  
   export default {
-    name: 'TaskItem',
-    components: { TaskEdit },
+    name: "TaskItem",
     props: {
       task: {
         type: Object,
         required: true
       },
+      // Receive the list of all boards so we can show board names
+      allBoards: {
+        type: Array,
+        required: true
+      }
     },
-    emits: ['delete-task', 'update-task', 'toggle-task-status', 'toggle-archive'],
-    setup(props, { emit }) {
-      const isEditing = ref(false)
-  
-      const startEditing = () => {
-        isEditing.value = true
-      }
-  
-      const closeEdit = () => {
-        isEditing.value = false
-      }
-  
-      const updateTask = (updatedTask) => {
-        emit('update-task', updatedTask)
-        isEditing.value = false // Close the modal after saving
-      }
-  
-      const deleteTask = () => {
-        emit('delete-task', props.task.id)
-      }
-  
-      const toggleStatus = () => {
-        emit('toggle-task-status', props.task.id)
-      }
-  
-      const toggleArchive = () => {
-        emit('toggle-archive', props.task.id)
-      }
-  
-
-  
-      // Computed class for styling task state
-      const taskClass = computed(() => ({
-        completed: props.task.status === 'Completed',
-        inProgress: props.task.status === 'In Progress',
-        pending: props.task.status === 'Pending',
-      }))
-  
-      const priorityClass = computed(() => {
-        if (props.task.priority === 'High') return 'high-priority'
-        if (props.task.priority === 'Medium') return 'medium-priority'
-        return 'low-priority'
-      })
-  
-      const dueDateClass = computed(() => {
-        const now = new Date()
-        const dueDate = new Date(props.task.dueDate)
-        if (dueDate < now) return 'overdue'
-        if (dueDate - now <= 24 * 60 * 60 * 1000) return 'due-soon'
-        return ''
-      })
-  
-      const formattedDueDate = computed(() => {
-        if (!props.task.dueDate) return ''
-        return new Date(props.task.dueDate).toLocaleDateString()
-      })
-  
+    data() {
       return {
-        isEditing,
-        startEditing,
-        closeEdit,
-        updateTask,
-        deleteTask,
-        toggleStatus,
-        toggleArchive,
-        taskClass,
-        priorityClass,
-        dueDateClass,
-        formattedDueDate
+        isEditing: false,
+        // Initialize editData with the current task’s details
+        editData: {
+          title: this.task.title,
+          dueDate: this.task.dueDate,
+          priority: this.task.priority,
+          boardId: this.task.boardId // current board
+        }
+      };
+    },
+    methods: {
+      startEditing() {
+        // Copy current task data into editData and enter edit mode
+        this.editData = {
+          title: this.task.title,
+          dueDate: this.task.dueDate,
+          priority: this.task.priority,
+          boardId: this.task.boardId
+        };
+        this.isEditing = true;
+      },
+      saveEdit() {
+        // Construct updated task object
+        const updatedTask = {
+          ...this.task,
+          title: this.editData.title,
+          dueDate: this.editData.dueDate,
+          priority: this.editData.priority,
+          boardId: this.editData.boardId
+        };
+        // Emit the updated task so the parent can handle moving it if needed
+        this.$emit("update-task", updatedTask);
+        this.isEditing = false;
+      },
+      cancelEdit() {
+        this.isEditing = false;
+        // Reset editData to original values
+        this.editData = {
+          title: this.task.title,
+          dueDate: this.task.dueDate,
+          priority: this.task.priority,
+          boardId: this.task.boardId
+        };
+      },
+      deleteTask() {
+        this.$emit("delete-task", this.task.id);
+      },
+      archiveTask() {
+        this.$emit("archive-task", this.task.id);
+      }
+    },
+    watch: {
+      // If the task prop changes from the parent, update editData when not editing.
+      task(newVal) {
+        if (!this.isEditing) {
+          this.editData = {
+            title: newVal.title,
+            dueDate: newVal.dueDate,
+            priority: newVal.priority,
+            boardId: newVal.boardId
+          };
+        }
       }
     }
-  }
+  };
   </script>
   
   <style scoped>
-  .completed {
-    text-decoration: line-through;
-  }
-  
-  .inProgress {
-    background-color: lightblue;
-  }
-  
-  .pending {
-    background-color: lightgray;
-  }
-  
-  .high-priority {
-    color: red;
-  }
-  
-  .medium-priority {
-    color: orange;
-  }
-  
-  .low-priority {
-    color: green;
-  }
-  
-  .due-soon {
-    background-color: yellow;
-  }
-  
-  .overdue {
-    background-color: red;
+  .task-item {
+    cursor: move;
   }
   </style>
   
